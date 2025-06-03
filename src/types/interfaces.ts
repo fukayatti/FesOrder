@@ -18,7 +18,7 @@ export interface MenuItem {
     price: number;
     imagePath: string;
     description: string;
-    toppings?: string[];
+    toppingIds: string[];
     additionalInfo?: string;
     soldOut: boolean;
 }

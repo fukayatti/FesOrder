@@ -3,9 +3,10 @@
 import { Loader2, Plus, Trash, Edit } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
+import { MenuForm } from "@/components/dashboard/MenuForm";
+import { ToppingForm } from "@/components/dashboard/ToppingForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     Dialog,
     DialogContent,
@@ -13,8 +14,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 
@@ -81,7 +80,7 @@ export default function MenuManagement() {
         } finally {
             setLoading(false);
         }
-    }, [toast]); // toastを依存配列に追加
+    }, [toast]);
 
     useEffect(() => {
         fetchMenuData();
@@ -248,7 +247,7 @@ export default function MenuManagement() {
                                             : "Add Menu Item"}
                                     </DialogTitle>
                                 </DialogHeader>
-                                <MenuItemForm
+                                <MenuForm
                                     item={
                                         editingItem || {
                                             id: "",
@@ -393,207 +392,5 @@ export default function MenuManagement() {
                 </TabsContent>
             </Tabs>
         </div>
-    );
-}
-
-interface MenuItemFormProps {
-    item: MenuItem;
-    toppingIds: Topping[];
-    onSubmit: (item: MenuItem) => void;
-}
-
-function MenuItemForm({ item, toppingIds, onSubmit }: MenuItemFormProps) {
-    const [formData, setFormData] = useState<MenuItem>({
-        ...item,
-        toppingIds: item.toppingIds || [], // Ensure toppingIds is always an array
-    });
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type, checked } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: type === "checkbox" ? checked : value,
-        }));
-    };
-
-    const handleToppingChange = (toppingId: string, checked: boolean) => {
-        setFormData((prev) => ({
-            ...prev,
-            toppingIds: checked
-                ? [...prev.toppingIds, toppingId]
-                : prev.toppingIds.filter((id) => id !== toppingId),
-        }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSubmit(formData);
-    };
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-                <Label htmlFor="menuName">Name</Label>
-                <Input
-                    id="menuName"
-                    name="menuName"
-                    value={formData.menuName}
-                    onChange={handleChange}
-                    required
-                />
-            </div>
-            <div>
-                <Label htmlFor="price">Price</Label>
-                <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={handleChange}
-                    required
-                />
-            </div>
-            <div>
-                <Label htmlFor="description">Description</Label>
-                <Input
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                />
-            </div>
-            <div>
-                <Label htmlFor="imagePath">Image Path</Label>
-                <Input
-                    id="imagePath"
-                    name="imagePath"
-                    value={formData.imagePath}
-                    onChange={handleChange}
-                />
-            </div>
-            <div>
-                <Label htmlFor="additionalInfo">Additional Info</Label>
-                <Input
-                    id="additionalInfo"
-                    name="additionalInfo"
-                    value={formData.additionalInfo}
-                    onChange={handleChange}
-                />
-            </div>
-            <div className="flex items-center space-x-2">
-                <Checkbox
-                    id="soldOut"
-                    name="soldOut"
-                    checked={formData.soldOut}
-                    onCheckedChange={(checked) =>
-                        setFormData((prev) => ({
-                            ...prev,
-                            soldOut: checked as boolean,
-                        }))
-                    }
-                />
-                <Label htmlFor="soldOut">Sold Out</Label>
-            </div>
-            <div>
-                <Label>Toppings</Label>
-                <div className="space-y-2">
-                    {toppingIds.map((topping) => (
-                        <div
-                            key={topping.id}
-                            className="flex items-center space-x-2"
-                        >
-                            <Checkbox
-                                id={`topping-${topping.id}`}
-                                checked={formData.toppingIds.includes(
-                                    topping.id
-                                )}
-                                onCheckedChange={(checked) =>
-                                    handleToppingChange(
-                                        topping.id,
-                                        checked as boolean
-                                    )
-                                }
-                            />
-                            <Label htmlFor={`topping-${topping.id}`}>
-                                {topping.toppingName}
-                            </Label>
-                        </div>
-                    ))}
-                </div>
-            </div>
-            <Button type="submit">Save</Button>
-        </form>
-    );
-}
-
-interface ToppingFormProps {
-    topping: Topping;
-    onSubmit: (topping: Topping) => void;
-}
-
-function ToppingForm({ topping, onSubmit }: ToppingFormProps) {
-    const [formData, setFormData] = useState(topping);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type, checked } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: type === "checkbox" ? checked : value,
-        }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSubmit(formData);
-    };
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-                <Label htmlFor="toppingName">Name</Label>
-                <Input
-                    id="toppingName"
-                    name="toppingName"
-                    value={formData.toppingName}
-                    onChange={handleChange}
-                    required
-                />
-            </div>
-            <div>
-                <Label htmlFor="price">Price</Label>
-                <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={handleChange}
-                    required
-                />
-            </div>
-            <div>
-                <Label htmlFor="description">Description</Label>
-                <Input
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                />
-            </div>
-            <div className="flex items-center space-x-2">
-                <Checkbox
-                    id="soldOut"
-                    name="soldOut"
-                    checked={formData.soldOut}
-                    onCheckedChange={(checked) =>
-                        setFormData((prev) => ({
-                            ...prev,
-                            soldOut: checked as boolean,
-                        }))
-                    }
-                />
-                <Label htmlFor="soldOut">Sold Out</Label>
-            </div>
-            <Button type="submit">Save</Button>
-        </form>
     );
 }

@@ -6,15 +6,9 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 
+import { ControlPanel } from "@/components/backyard/ControlPanel";
+import { OrderList } from "@/components/backyard/OrderList";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     Dialog,
     DialogContent,
@@ -22,18 +16,8 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { MenuItem, Topping, Order, OrderItem } from "@/types/interfaces";
-
 
 const DashboardMenus = dynamic(
     () => import("@/app/(page)/dashboard/menus/page"),
@@ -49,7 +33,7 @@ export default function Backyard() {
         Record<string, Set<string>>
     >({});
     const [useWebSocket, setUseWebSocket] = useState(false);
-    const [pollingInterval, setPollingInterval] = useState(60000); // Default to 1 minute
+    const [pollingInterval, setPollingInterval] = useState(60000);
     const [socket, setSocket] = useState<Socket | null>(null);
     const [showDashboardMenus, setShowDashboardMenus] = useState(false);
     const { toast } = useToast();
@@ -246,7 +230,7 @@ export default function Backyard() {
     }, []);
 
     if (!circleId) {
-        return null; // or a loading spinner
+        return null;
     }
 
     return (
@@ -254,33 +238,16 @@ export default function Backyard() {
             <h1 className="text-3xl font-bold mb-6">
                 Backyard Order Management
             </h1>
-            <div className="mb-6 space-y-4">
-                <div className="flex items-center space-x-2">
-                    <Switch
-                        id="use-websocket"
-                        checked={useWebSocket}
-                        onCheckedChange={handleWebSocketToggle}
-                    />
-                    <Label htmlFor="use-websocket">Use WebSocket</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Label htmlFor="polling-interval">Polling Interval</Label>
-                    <Select
-                        onValueChange={handleIntervalChange}
-                        defaultValue={pollingInterval.toString()}
-                    >
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select interval" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="30000">30 seconds</SelectItem>
-                            <SelectItem value="60000">1 minute</SelectItem>
-                            <SelectItem value="300000">5 minutes</SelectItem>
-                            <SelectItem value="600000">10 minutes</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <Button onClick={fetchOrders}>Reload Orders</Button>
+
+            <ControlPanel
+                useWebSocket={useWebSocket}
+                onWebSocketToggle={handleWebSocketToggle}
+                pollingInterval={pollingInterval}
+                onIntervalChange={handleIntervalChange}
+                onReloadOrders={fetchOrders}
+            />
+
+            <div className="mb-6">
                 <Dialog>
                     <DialogTrigger asChild>
                         <Button onClick={() => setShowDashboardMenus(true)}>
@@ -295,74 +262,16 @@ export default function Backyard() {
                     </DialogContent>
                 </Dialog>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {orders.map((order) => (
-                    <Card key={order.id} className="flex flex-col">
-                        <CardHeader>
-                            <CardTitle>Order #{order.orderId}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-grow">
-                            {order.orderItems.map((itemId: string) => {
-                                const orderItem = JSON.parse(
-                                    itemId
-                                ) as OrderItem;
-                                const menuItem =
-                                    menuItems[orderItem.menuItemId];
-                                if (!menuItem) return null;
-                                return (
-                                    <div
-                                        key={orderItem.menuItemId}
-                                        className="flex items-center space-x-2 mb-2"
-                                    >
-                                        <Checkbox
-                                            id={`${order.id}-${orderItem.menuItemId}`}
-                                            checked={completedItems[
-                                                order.id
-                                            ]?.has(itemId)}
-                                            onCheckedChange={() =>
-                                                toggleItemCompletion(
-                                                    order.id,
-                                                    itemId
-                                                )
-                                            }
-                                        />
-                                        <label
-                                            htmlFor={`${order.id}-${orderItem.menuItemId}`}
-                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                        >
-                                            {menuItem.menuName} x
-                                            {orderItem.quantity}
-                                            {orderItem.toppingIds &&
-                                                orderItem.toppingIds.length >
-                                                    0 && (
-                                                    <span className="block text-xs text-gray-500">
-                                                        Toppings:{" "}
-                                                        {orderItem.toppingIds
-                                                            .map(
-                                                                (id) =>
-                                                                    toppings[id]
-                                                                        ?.toppingName
-                                                            )
-                                                            .join(", ")}
-                                                    </span>
-                                                )}
-                                        </label>
-                                    </div>
-                                );
-                            })}
-                        </CardContent>
-                        <CardFooter>
-                            <Button
-                                className="w-full"
-                                disabled={!isOrderComplete(order)}
-                                onClick={() => completeOrder(order.id)}
-                            >
-                                Complete Order
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                ))}
-            </div>
+
+            <OrderList
+                orders={orders}
+                menuItems={menuItems}
+                toppings={toppings}
+                completedItems={completedItems}
+                onToggleItemCompletion={toggleItemCompletion}
+                onCompleteOrder={completeOrder}
+                isOrderComplete={isOrderComplete}
+            />
         </div>
     );
 }
