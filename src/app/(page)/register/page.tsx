@@ -38,7 +38,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 
-
 interface MenuItem {
     id: string;
     menuName: string;
@@ -249,8 +248,8 @@ export default function Component() {
                 </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-hidden">
-                <ScrollArea className="h-[calc(100vh-16rem)]">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+                <ScrollArea className="h-[calc(100vh-20rem)]">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 pb-20">
                         {menuItems.map((item) => (
                             <Card
                                 key={item.id}
@@ -294,16 +293,6 @@ export default function Component() {
                     </div>
                 </ScrollArea>
             </CardContent>
-            <CardFooter className="border-t p-4">
-                <Button
-                    onClick={() => setShowOrderDialog(true)}
-                    className="w-full"
-                    disabled={cart.length === 0}
-                >
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    Proceed to Order ({cart.length})
-                </Button>
-            </CardFooter>
         </Card>
     );
 
@@ -718,6 +707,20 @@ export default function Component() {
                 )}
             </header>
             <main className="flex-1 overflow-hidden p-4">{renderMenu()}</main>
+
+            {/* Fixed order button at bottom */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-50">
+                <Button
+                    onClick={() => setShowOrderDialog(true)}
+                    className="w-full"
+                    disabled={cart.length === 0}
+                    size="lg"
+                >
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    Proceed to Order ({cart.length})
+                </Button>
+            </div>
+
             {renderItemDialog()}
             {renderOrderDialog()}
             {renderCashierDialog()}
