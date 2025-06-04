@@ -3,6 +3,7 @@
 import { Loader2, Plus, Trash, Edit } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
+import AuthGuard from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { getCircleId } from "@/lib/auth";
 
 interface MenuItem {
     id: string;
@@ -52,10 +54,10 @@ export default function MenuManagement() {
 
     const fetchMenuData = useCallback(async () => {
         setLoading(true);
-        const circleId = "09e6beabe3504beeb6b51d9efa7d3e6f";
+        const circleId = getCircleId();
 
         if (!circleId) {
-            window.location.href = "/login?page=dashboard/menus";
+            window.location.href = "/login";
             return;
         }
         setCircleId(circleId);
@@ -81,7 +83,7 @@ export default function MenuManagement() {
         } finally {
             setLoading(false);
         }
-    }, [toast]); // toastを依存配列に追加
+    }, [toast]);
 
     useEffect(() => {
         fetchMenuData();
@@ -220,192 +222,207 @@ export default function MenuManagement() {
     }
 
     return (
-        <div className="container mx-auto p-4">
-            <h1 className="text-3xl font-bold mb-6">Menu Management</h1>
-            <Tabs defaultValue="menu-items">
-                <TabsList className="mb-4">
-                    <TabsTrigger value="menu-items">Menu Items</TabsTrigger>
-                    <TabsTrigger value="toppings">Toppings</TabsTrigger>
-                </TabsList>
-                <TabsContent value="menu-items">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-semibold">Menu Items</h2>
-                        <Dialog
-                            open={isMenuDialogOpen}
-                            onOpenChange={setIsMenuDialogOpen}
-                        >
-                            <DialogTrigger asChild>
-                                <Button onClick={() => setEditingItem(null)}>
-                                    <Plus className="mr-2 h-4 w-4" /> Add Menu
-                                    Item
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>
-                                        {editingItem
-                                            ? "Edit Menu Item"
-                                            : "Add Menu Item"}
-                                    </DialogTitle>
-                                </DialogHeader>
-                                <MenuItemForm
-                                    item={
-                                        editingItem || {
-                                            id: "",
-                                            menuName: "",
-                                            price: 0,
-                                            imagePath: "",
-                                            description: "",
-                                            additionalInfo: "",
-                                            soldOut: false,
-                                            toppingIds: [],
+        <AuthGuard>
+            <div className="container mx-auto p-4">
+                <h1 className="text-3xl font-bold mb-6">Menu Management</h1>
+                <Tabs defaultValue="menu-items">
+                    <TabsList className="mb-4">
+                        <TabsTrigger value="menu-items">Menu Items</TabsTrigger>
+                        <TabsTrigger value="toppings">Toppings</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="menu-items">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-semibold">
+                                Menu Items
+                            </h2>
+                            <Dialog
+                                open={isMenuDialogOpen}
+                                onOpenChange={setIsMenuDialogOpen}
+                            >
+                                <DialogTrigger asChild>
+                                    <Button
+                                        onClick={() => setEditingItem(null)}
+                                    >
+                                        <Plus className="mr-2 h-4 w-4" /> Add
+                                        Menu Item
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            {editingItem
+                                                ? "Edit Menu Item"
+                                                : "Add Menu Item"}
+                                        </DialogTitle>
+                                    </DialogHeader>
+                                    <MenuItemForm
+                                        item={
+                                            editingItem || {
+                                                id: "",
+                                                menuName: "",
+                                                price: 0,
+                                                imagePath: "",
+                                                description: "",
+                                                additionalInfo: "",
+                                                soldOut: false,
+                                                toppingIds: [],
+                                            }
                                         }
-                                    }
-                                    toppingIds={toppings}
-                                    onSubmit={handleAddOrEditMenuItem}
-                                />
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {menuItems.map((item) => (
-                            <Card key={item.id}>
-                                <CardHeader>
-                                    <CardTitle className="flex justify-between items-center">
-                                        {item.menuName}
-                                        <div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => {
-                                                    setEditingItem(item);
-                                                    setIsMenuDialogOpen(true);
-                                                }}
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() =>
-                                                    handleDeleteMenuItem(
-                                                        item.id
-                                                    )
-                                                }
-                                            >
-                                                <Trash className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p>Price: ¥{item.price}</p>
-                                    <p>Description: {item.description}</p>
-                                    <p>
-                                        Sold Out: {item.soldOut ? "Yes" : "No"}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </TabsContent>
-                <TabsContent value="toppings">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-semibold">Toppings</h2>
-                        <Dialog
-                            open={isToppingDialogOpen}
-                            onOpenChange={setIsToppingDialogOpen}
-                        >
-                            <DialogTrigger asChild>
-                                <Button onClick={() => setEditingTopping(null)}>
-                                    <Plus className="mr-2 h-4 w-4" /> Add
-                                    Topping
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>
-                                        {editingTopping
-                                            ? "Edit Topping"
-                                            : "Add Topping"}
-                                    </DialogTitle>
-                                </DialogHeader>
-                                <ToppingForm
-                                    topping={
-                                        editingTopping || {
-                                            id: "",
-                                            circleId: "",
-                                            toppingName: "",
-                                            price: 0,
-                                            description: "",
-                                            soldOut: false,
+                                        toppings={toppings}
+                                        onSubmit={handleAddOrEditMenuItem}
+                                    />
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {menuItems.map((item) => (
+                                <Card key={item.id}>
+                                    <CardHeader>
+                                        <CardTitle className="flex justify-between items-center">
+                                            {item.menuName}
+                                            <div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => {
+                                                        setEditingItem(item);
+                                                        setIsMenuDialogOpen(
+                                                            true
+                                                        );
+                                                    }}
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() =>
+                                                        handleDeleteMenuItem(
+                                                            item.id
+                                                        )
+                                                    }
+                                                >
+                                                    <Trash className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p>Price: ¥{item.price}</p>
+                                        <p>Description: {item.description}</p>
+                                        <p>
+                                            Sold Out:{" "}
+                                            {item.soldOut ? "Yes" : "No"}
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="toppings">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-semibold">Toppings</h2>
+                            <Dialog
+                                open={isToppingDialogOpen}
+                                onOpenChange={setIsToppingDialogOpen}
+                            >
+                                <DialogTrigger asChild>
+                                    <Button
+                                        onClick={() => setEditingTopping(null)}
+                                    >
+                                        <Plus className="mr-2 h-4 w-4" /> Add
+                                        Topping
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            {editingTopping
+                                                ? "Edit Topping"
+                                                : "Add Topping"}
+                                        </DialogTitle>
+                                    </DialogHeader>
+                                    <ToppingForm
+                                        topping={
+                                            editingTopping || {
+                                                id: "",
+                                                circleId: "",
+                                                toppingName: "",
+                                                price: 0,
+                                                description: "",
+                                                soldOut: false,
+                                            }
                                         }
-                                    }
-                                    onSubmit={handleAddOrEditTopping}
-                                />
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {toppings.map((topping) => (
-                            <Card key={topping.id}>
-                                <CardHeader>
-                                    <CardTitle className="flex justify-between items-center">
-                                        {topping.toppingName}
-                                        <div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => {
-                                                    setEditingTopping(topping);
-                                                    setIsToppingDialogOpen(
-                                                        true
-                                                    );
-                                                }}
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() =>
-                                                    handleDeleteTopping(
-                                                        topping.id
-                                                    )
-                                                }
-                                            >
-                                                <Trash className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p>Price: ¥{topping.price}</p>
-                                    <p>Description: {topping.description}</p>
-                                    <p>
-                                        Sold Out:{" "}
-                                        {topping.soldOut ? "Yes" : "No"}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </TabsContent>
-            </Tabs>
-        </div>
+                                        onSubmit={handleAddOrEditTopping}
+                                    />
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {toppings.map((topping) => (
+                                <Card key={topping.id}>
+                                    <CardHeader>
+                                        <CardTitle className="flex justify-between items-center">
+                                            {topping.toppingName}
+                                            <div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => {
+                                                        setEditingTopping(
+                                                            topping
+                                                        );
+                                                        setIsToppingDialogOpen(
+                                                            true
+                                                        );
+                                                    }}
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() =>
+                                                        handleDeleteTopping(
+                                                            topping.id
+                                                        )
+                                                    }
+                                                >
+                                                    <Trash className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p>Price: ¥{topping.price}</p>
+                                        <p>
+                                            Description: {topping.description}
+                                        </p>
+                                        <p>
+                                            Sold Out:{" "}
+                                            {topping.soldOut ? "Yes" : "No"}
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </TabsContent>
+                </Tabs>
+            </div>
+        </AuthGuard>
     );
 }
 
 interface MenuItemFormProps {
     item: MenuItem;
-    toppingIds: Topping[];
+    toppings: Topping[];
     onSubmit: (item: MenuItem) => void;
 }
 
-function MenuItemForm({ item, toppingIds, onSubmit }: MenuItemFormProps) {
+function MenuItemForm({ item, toppings, onSubmit }: MenuItemFormProps) {
     const [formData, setFormData] = useState<MenuItem>({
         ...item,
-        toppingIds: item.toppingIds || [], // Ensure toppingIds is always an array
+        toppingIds: item.toppingIds || [],
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -497,7 +514,7 @@ function MenuItemForm({ item, toppingIds, onSubmit }: MenuItemFormProps) {
             <div>
                 <Label>Toppings</Label>
                 <div className="space-y-2">
-                    {toppingIds.map((topping) => (
+                    {toppings.map((topping) => (
                         <div
                             key={topping.id}
                             className="flex items-center space-x-2"

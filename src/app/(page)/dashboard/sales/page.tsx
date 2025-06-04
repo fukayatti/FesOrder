@@ -16,6 +16,7 @@ import {
     ResponsiveContainer,
 } from "recharts";
 
+import AuthGuard from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -25,7 +26,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-
+import { getCircleId } from "@/lib/auth";
 
 interface Order {
     id: string;
@@ -76,9 +77,9 @@ export default function Component() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const storedCircleId = "09e6beabe3504beeb6b51d9efa7d3e6f";
+            const storedCircleId = getCircleId();
             if (!storedCircleId) {
-                router.push("/login?page=/dashboard/sales");
+                router.push("/login");
                 return;
             }
             _setCircleId(storedCircleId);
@@ -270,224 +271,122 @@ export default function Component() {
         .slice(0, 5);
 
     return (
-        <div className="container mx-auto p-4">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-                <h1 className="text-4xl font-bold mb-4 md:mb-0">
-                    Sales Dashboard
-                </h1>
-                <Button
-                    onClick={handleRefresh}
-                    className="flex items-center gap-2"
-                >
-                    <RefreshCw className="h-4 w-4" />
-                    Refresh
-                </Button>
-            </div>
+        <AuthGuard>
+            <div className="container mx-auto p-4">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+                    <h1 className="text-4xl font-bold mb-4 md:mb-0">
+                        Sales Dashboard
+                    </h1>
+                    <Button
+                        onClick={handleRefresh}
+                        className="flex items-center gap-2"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                        Refresh
+                    </Button>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <Card>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Total Sales</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-4xl font-bold text-center text-primary">
+                                {formatCurrency(getTotalSales())}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Total Customers</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-4xl font-bold text-center text-primary">
+                                {getTotalCustomers()}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Total Orders</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-4xl font-bold text-center text-primary">
+                                {getAverageOrderValue()}
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <div className="flex justify-end mb-4">
+                    <Select value={timeRange} onValueChange={setTimeRange}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select time range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="hourly">Hourly</SelectItem>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Sales Over Time</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-[300px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={chartData}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="name" />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Legend />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="sales"
+                                            stroke="#8884d8"
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Menu Item Sales (Quantity)</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-[300px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={menuItemChartData}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="name" />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Legend />
+                                        <Bar
+                                            dataKey="quantity"
+                                            fill="#8884d8"
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Card className="mb-8">
                     <CardHeader>
-                        <CardTitle>Total Sales</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-4xl font-bold text-center text-primary">
-                            {formatCurrency(getTotalSales())}
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Total Customers</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-4xl font-bold text-center text-primary">
-                            {getTotalCustomers()}
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Total Orders</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-4xl font-bold text-center text-primary">
-                            {getAverageOrderValue()}
-                        </p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <div className="flex justify-end mb-4">
-                <Select value={timeRange} onValueChange={setTimeRange}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select time range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="hourly">Hourly</SelectItem>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Sales Over Time</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="sales"
-                                        stroke="#8884d8"
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Menu Item Sales (Quantity)</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={menuItemChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Bar dataKey="quantity" fill="#8884d8" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Card className="mb-8">
-                <CardHeader>
-                    <CardTitle>Topping Usage by Menu Item</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3">
-                                        Menu Item
-                                    </th>
-                                    {toppings.map((topping) => (
-                                        <th
-                                            key={topping.id}
-                                            scope="col"
-                                            className="px-6 py-3"
-                                        >
-                                            {topping.toppingName}
-                                        </th>
-                                    ))}
-                                    <th scope="col" className="px-6 py-3">
-                                        Total Orders
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {Object.entries(toppingUsage).map(
-                                    ([menuItem, usage]) => (
-                                        <tr
-                                            key={menuItem}
-                                            className="bg-white border-b dark:bg-gray-800 dark:border-gray-700"
-                                        >
-                                            <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                                                {menuItem}
-                                            </td>
-                                            {toppings.map((topping) => (
-                                                <td
-                                                    key={topping.id}
-                                                    className="px-6 py-4"
-                                                >
-                                                    {usage[topping.toppingName]
-                                                        ? `${(
-                                                              (usage[
-                                                                  topping
-                                                                      .toppingName
-                                                              ] /
-                                                                  usage.totalOrders) *
-                                                              100
-                                                          ).toFixed(2)}% (${
-                                                              usage[
-                                                                  topping
-                                                                      .toppingName
-                                                              ]
-                                                          })`
-                                                        : "0%"}
-                                                </td>
-                                            ))}
-                                            <td className="px-6 py-4">
-                                                {usage.totalOrders}
-                                            </td>
-                                        </tr>
-                                    )
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="mb-8">
-                <CardHeader>
-                    <CardTitle>Total Topping Usage</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-2xl font-bold text-center text-primary">
-                        {totalToppings}
-                    </p>
-                </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Hourly Order Count</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={hourlyOrderChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="orders"
-                                        stroke="#82ca9d"
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Cashier Ranking</CardTitle>
+                        <CardTitle>Topping Usage by Menu Item</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto">
@@ -495,31 +394,58 @@ export default function Component() {
                                 <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                     <tr>
                                         <th scope="col" className="px-6 py-3">
-                                            Rank
+                                            Menu Item
                                         </th>
+                                        {toppings.map((topping) => (
+                                            <th
+                                                key={topping.id}
+                                                scope="col"
+                                                className="px-6 py-3"
+                                            >
+                                                {topping.toppingName}
+                                            </th>
+                                        ))}
                                         <th scope="col" className="px-6 py-3">
-                                            Cashier
-                                        </th>
-                                        <th scope="col" className="px-6 py-3">
-                                            Total Sales
+                                            Total Orders
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {cashierRankingData.map(
-                                        ([cashier, sales], index) => (
+                                    {Object.entries(toppingUsage).map(
+                                        ([menuItem, usage]) => (
                                             <tr
-                                                key={cashier}
+                                                key={menuItem}
                                                 className="bg-white border-b dark:bg-gray-800 dark:border-gray-700"
                                             >
-                                                <td className="px-6 py-4">
-                                                    {index + 1}
+                                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                                                    {menuItem}
                                                 </td>
+                                                {toppings.map((topping) => (
+                                                    <td
+                                                        key={topping.id}
+                                                        className="px-6 py-4"
+                                                    >
+                                                        {usage[
+                                                            topping.toppingName
+                                                        ]
+                                                            ? `${(
+                                                                  (usage[
+                                                                      topping
+                                                                          .toppingName
+                                                                  ] /
+                                                                      usage.totalOrders) *
+                                                                  100
+                                                              ).toFixed(2)}% (${
+                                                                  usage[
+                                                                      topping
+                                                                          .toppingName
+                                                                  ]
+                                                              })`
+                                                            : "0%"}
+                                                    </td>
+                                                ))}
                                                 <td className="px-6 py-4">
-                                                    {cashier}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {formatCurrency(sales)}
+                                                    {usage.totalOrders}
                                                 </td>
                                             </tr>
                                         )
@@ -529,75 +455,168 @@ export default function Component() {
                         </div>
                     </CardContent>
                 </Card>
-            </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Recent Orders</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3">
-                                        Order ID
-                                    </th>
-                                    <th scope="col" className="px-6 py-3">
-                                        Items
-                                    </th>
-                                    <th scope="col" className="px-6 py-3">
-                                        Amount
-                                    </th>
-                                    <th scope="col" className="px-6 py-3">
-                                        Date
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {orders.slice(0, 10).map((order) => (
-                                    <tr
-                                        key={order.id}
-                                        className="bg-white border-b dark:bg-gray-800 dark:border-gray-700"
-                                    >
-                                        <td className="px-6 py-4">
-                                            {order.orderId}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {JSON.parse(order.orderItems)
-                                                .map(
-                                                    (item: {
-                                                        menuItemId: string;
-                                                        quantity: number;
-                                                    }) => {
-                                                        const menuItem =
-                                                            menuItems.find(
-                                                                (m) =>
-                                                                    m.id ===
-                                                                    item.menuItemId
-                                                            );
-                                                        return menuItem
-                                                            ? `${item.quantity}x ${menuItem.menuName}`
-                                                            : "";
-                                                    }
-                                                )
-                                                .join(", ")}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {formatCurrency(order.totalPrice)}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {new Date(
-                                                order.time
-                                            ).toLocaleString("ja-JP")}
-                                        </td>
+                <Card className="mb-8">
+                    <CardHeader>
+                        <CardTitle>Total Topping Usage</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-center text-primary">
+                            {totalToppings}
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Hourly Order Count</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-[300px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={hourlyOrderChartData}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="name" />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Legend />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="orders"
+                                            stroke="#82ca9d"
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Cashier Ranking</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                        <tr>
+                                            <th
+                                                scope="col"
+                                                className="px-6 py-3"
+                                            >
+                                                Rank
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-6 py-3"
+                                            >
+                                                Cashier
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-6 py-3"
+                                            >
+                                                Total Sales
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {cashierRankingData.map(
+                                            ([cashier, sales], index) => (
+                                                <tr
+                                                    key={cashier}
+                                                    className="bg-white border-b dark:bg-gray-800 dark:border-gray-700"
+                                                >
+                                                    <td className="px-6 py-4">
+                                                        {index + 1}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {cashier}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {formatCurrency(sales)}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Recent Orders</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                    <tr>
+                                        <th scope="col" className="px-6 py-3">
+                                            Order ID
+                                        </th>
+                                        <th scope="col" className="px-6 py-3">
+                                            Items
+                                        </th>
+                                        <th scope="col" className="px-6 py-3">
+                                            Amount
+                                        </th>
+                                        <th scope="col" className="px-6 py-3">
+                                            Date
+                                        </th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+                                </thead>
+                                <tbody>
+                                    {orders.slice(0, 10).map((order) => (
+                                        <tr
+                                            key={order.id}
+                                            className="bg-white border-b dark:bg-gray-800 dark:border-gray-700"
+                                        >
+                                            <td className="px-6 py-4">
+                                                {order.orderId}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {JSON.parse(order.orderItems)
+                                                    .map(
+                                                        (item: {
+                                                            menuItemId: string;
+                                                            quantity: number;
+                                                        }) => {
+                                                            const menuItem =
+                                                                menuItems.find(
+                                                                    (m) =>
+                                                                        m.id ===
+                                                                        item.menuItemId
+                                                                );
+                                                            return menuItem
+                                                                ? `${item.quantity}x ${menuItem.menuName}`
+                                                                : "";
+                                                        }
+                                                    )
+                                                    .join(", ")}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {formatCurrency(
+                                                    order.totalPrice
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {new Date(
+                                                    order.time
+                                                ).toLocaleString("ja-JP")}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </AuthGuard>
     );
 }

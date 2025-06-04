@@ -1,10 +1,14 @@
-import React from 'react';
+"use client";
+
+import React from "react";
+
+import AuthGuard from "@/components/AuthGuard";
 
 const DashboardPage: React.FC = () => {
     return (
-        <div>
-            this is dashboard
-        </div>
+        <AuthGuard>
+            <div>this is dashboard</div>
+        </AuthGuard>
     );
 };
 

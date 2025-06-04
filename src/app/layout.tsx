@@ -2,6 +2,7 @@ import { Inter } from "next/font/google";
 
 import "@/app/globals.css";
 import Header from "@/components/Header";
+import SessionProvider from "@/components/SessionProvider";
 
 import type { Metadata } from "next";
 
@@ -20,10 +21,14 @@ export default function RootLayout({
     return (
         <html lang="jp">
             <body className={inter.className}>
-                <div className="flex flex-col min-h-screen">
-                    <Header />
-                    <main className="flex-1 overflow-auto p-6">{children}</main>
-                </div>
+                <SessionProvider>
+                    <div className="flex flex-col min-h-screen">
+                        <Header />
+                        <main className="flex-1 overflow-auto p-6">
+                            {children}
+                        </main>
+                    </div>
+                </SessionProvider>
             </body>
         </html>
     );
