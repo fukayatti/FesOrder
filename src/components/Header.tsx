@@ -156,6 +156,7 @@ export default function Header() {
                         alt="FesOrder Logo"
                         width={40}
                         height={40}
+                        style={{ height: "auto" }}
                     />
                 </div>
                 <h1 className="text-xl font-bold">FesOrder</h1>

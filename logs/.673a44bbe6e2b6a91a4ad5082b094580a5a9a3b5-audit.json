@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/Users/fukayatti0/FesOrder/logs/.673a44bbe6e2b6a91a4ad5082b094580a5a9a3b5-audit.json",
+    "files": [
+        {
+            "date": 1749101755218,
+            "name": "/Users/fukayatti0/FesOrder/logs/mcp-puppeteer-2025-06-05.log",
+            "hash": "27c73262b45fb73aa3aa30a2eb99bd1716de944b0dbe4b51d5564184fb766cc6"
+        },
+        {
+            "date": 1749373658405,
+            "name": "/Users/fukayatti0/FesOrder/logs/mcp-puppeteer-2025-06-08.log",
+            "hash": "75174ab4c80e8f52f239a05e2c52350205ae05128a7c8136b8ceee73a3897af1"
+        }
+    ],
+    "hashType": "sha256"
+}

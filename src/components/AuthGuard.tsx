@@ -22,7 +22,89 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     } = useAuth();
 
     useEffect(() => {
-        const checkAuth = () => {
+        const syncPendingRoleUpdate = async () => {
+            // sessionStorageに保存されている未同期のロール情報をチェック
+            // 既に同期処理中の場合はスキップ
+            if (sessionStorage.getItem("syncInProgress")) {
+                return;
+            }
+
+            try {
+                const pendingUpdate =
+                    sessionStorage.getItem("pendingRoleUpdate");
+                if (pendingUpdate && session?.user?.email) {
+                    const updateData = JSON.parse(pendingUpdate);
+
+                    // 5分以内の更新のみ処理（古いデータは無視）
+                    const now = Date.now();
+                    const updateAge = now - updateData.timestamp;
+                    const fiveMinutes = 5 * 60 * 1000;
+
+                    if (
+                        updateAge < fiveMinutes &&
+                        updateData.email === session.user.email
+                    ) {
+                        console.log(
+                            "Syncing pending role update to Notion:",
+                            updateData
+                        );
+
+                        // 同期処理中フラグを設定
+                        sessionStorage.setItem("syncInProgress", "true");
+
+                        try {
+                            const response = await fetch(
+                                "/api/auth/update-user",
+                                {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        role: updateData.role,
+                                        circle: updateData.circle,
+                                        username: updateData.username,
+                                    }),
+                                }
+                            );
+
+                            if (response.ok) {
+                                console.log(
+                                    "Pending role update synced successfully"
+                                );
+                                // 同期完了後、sessionStorageから削除
+                                sessionStorage.removeItem("pendingRoleUpdate");
+                            } else {
+                                const errorData = await response
+                                    .json()
+                                    .catch(() => ({}));
+                                console.error(
+                                    "Failed to sync pending role update:",
+                                    response.status,
+                                    errorData
+                                );
+                            }
+                        } catch (syncError) {
+                            console.error(
+                                "Error syncing pending role update:",
+                                syncError
+                            );
+                        } finally {
+                            // 同期処理中フラグを削除
+                            sessionStorage.removeItem("syncInProgress");
+                        }
+                    } else {
+                        // 古いデータまたは異なるユーザーのデータは削除
+                        sessionStorage.removeItem("pendingRoleUpdate");
+                    }
+                }
+            } catch (error) {
+                console.error("Error processing pending role update:", error);
+                sessionStorage.removeItem("syncInProgress");
+            }
+        };
+
+        const checkAuth = async () => {
             // ログインページの場合は認証チェックをスキップ
             if (pathname === "/login") {
                 setIsAuth(true);
@@ -51,6 +133,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
             // NextAuth.jsのセッションがある場合はCookieと同期
             if (session) {
                 syncSessionWithCookies(session);
+                // sessionStorageの未同期情報もチェック
+                await syncPendingRoleUpdate();
             }
 
             // 認証されていない場合はログインページにリダイレクト

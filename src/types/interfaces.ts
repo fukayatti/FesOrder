@@ -9,6 +9,7 @@ export interface Circle {
     description?: string;
     iconImagePath?: string;
     backgroundImagePath?: string;
+    owners?: string; // オーナーのユーザーID
 }
 
 export interface MenuItem {
@@ -49,4 +50,21 @@ export interface OrderItem {
     quantity: number;
     toppingIds?: string[];
     options?: string[];
+}
+
+export type UserRole = "manager" | "staff" | "volunteer" | "custom";
+
+export interface UserSession {
+    circleId: string;
+    circleName: string;
+    eventName: string;
+    userRole: UserRole;
+    username: string;
+    customPermissions?: string[];
+}
+
+export interface RolePermissions {
+    manager: string[];
+    staff: string[];
+    custom: string[];
 }

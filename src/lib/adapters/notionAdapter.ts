@@ -4,18 +4,27 @@ import type {
     CreatePageResponse,
     PageObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
-import type { Adapter, AdapterUser, AdapterAccount } from "next-auth/adapters";
+import type {
+    Adapter,
+    AdapterUser,
+    AdapterAccount,
+    AdapterSession,
+    VerificationToken,
+} from "next-auth/adapters";
 
 // Notion APIクライアントの初期化
 const notion = new Client({ auth: process.env.NOTION_API_TOKEN });
 const databaseId = process.env.NOTION_DATABASE_LOGIN!;
 
-type NotionUserData = {
+type NotionAdapter = {
     name: string;
     email?: string;
     provider?: string;
     providerAccountId?: string;
+    image?: string;
     updatedAt?: string;
+    role?: string;
+    circle?: string;
 };
 
 /**
@@ -60,12 +69,84 @@ export default function NotionAdapter(): Adapter {
                 return "";
             };
 
+            const getImage = () => {
+                // ImageUrlプロパティを試す
+                const imageUrlProperty = properties.ImageUrl;
+                if (imageUrlProperty?.type === "url") {
+                    return imageUrlProperty.url;
+                }
+
+                // Imageプロパティを試す
+                const imageProperty = properties.Image;
+                if (imageProperty?.type === "url") {
+                    return imageProperty.url;
+                }
+
+                // ImageTextプロパティを試す（rich_textとして保存されている場合）
+                const imageTextProperty = properties.ImageText;
+                if (
+                    imageTextProperty?.type === "rich_text" &&
+                    imageTextProperty.rich_text.length > 0
+                ) {
+                    return imageTextProperty.rich_text[0].plain_text;
+                }
+
+                return undefined;
+            };
+
+            const getRole = () => {
+                const roleProperty = properties.Role;
+                if (
+                    roleProperty?.type === "rich_text" &&
+                    roleProperty.rich_text.length > 0
+                ) {
+                    return roleProperty.rich_text[0].plain_text;
+                }
+                return undefined;
+            };
+
+            const getCircle = () => {
+                const circleProperty = properties.circle;
+                if (
+                    circleProperty?.type === "rich_text" &&
+                    circleProperty.rich_text.length > 0
+                ) {
+                    return circleProperty.rich_text[0].plain_text;
+                }
+                return undefined;
+            };
+
+            const getPermissions = () => {
+                const permissionProperty = properties.Permission;
+                if (
+                    permissionProperty?.type === "rich_text" &&
+                    permissionProperty.rich_text.length > 0
+                ) {
+                    try {
+                        const jsonString =
+                            permissionProperty.rich_text[0].plain_text;
+                        return JSON.parse(jsonString);
+                    } catch {
+                        return [];
+                    }
+                }
+                return [];
+            };
+
             return {
                 id: getProviderAccountId() || page.id,
                 name: getName(),
                 email: getEmail(),
-                image: null,
+                image: getImage() || null,
                 emailVerified: null,
+                // カスタムプロパティを追加
+                role: getRole(),
+                circle: getCircle(),
+                permissions: getPermissions(),
+            } as AdapterUser & {
+                role?: string;
+                circle?: string;
+                permissions?: string[];
             };
         } catch (error) {
             console.error("Error extracting user from page:", error);
@@ -81,49 +162,110 @@ export default function NotionAdapter(): Adapter {
             try {
                 const now = new Date().toISOString();
 
+                // 基本的なプロパティ
+                const properties: any = {
+                    Name: {
+                        title: [
+                            {
+                                text: {
+                                    content: user.name || "Unknown User",
+                                },
+                            },
+                        ],
+                    },
+                    Email: {
+                        email: user.email || "",
+                    },
+                    Provider: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: "google",
+                                },
+                            },
+                        ],
+                    },
+                    ProviderAccountId: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content:
+                                        (user as any).providerAccountId || "",
+                                },
+                            },
+                        ],
+                    },
+                    Role: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: (user as any).role || "",
+                                },
+                            },
+                        ],
+                    },
+                    circle: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: (user as any).circle || "",
+                                },
+                            },
+                        ],
+                    },
+                    Permission: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: JSON.stringify(
+                                        (user as any).permissions || []
+                                    ),
+                                },
+                            },
+                        ],
+                    },
+                    UpdatedAt: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: now,
+                                },
+                            },
+                        ],
+                    },
+                };
+
+                // ImageUrlプロパティが存在する場合のみ追加
+                if ((user as any).image) {
+                    try {
+                        // まずImageUrlプロパティを試す
+                        properties.ImageUrl = {
+                            url: (user as any).image,
+                        };
+                    } catch (error) {
+                        // ImageUrlプロパティが存在しない場合は、Image プロパティを試す
+                        try {
+                            properties.Image = {
+                                url: (user as any).image,
+                            };
+                        } catch (error2) {
+                            // どちらも失敗した場合は、imageプロパティをrich_textとして保存
+                            properties.ImageText = {
+                                rich_text: [
+                                    {
+                                        text: {
+                                            content: (user as any).image,
+                                        },
+                                    },
+                                ],
+                            };
+                        }
+                    }
+                }
+
                 const response = (await notion.pages.create({
                     parent: { database_id: databaseId },
-                    properties: {
-                        Name: {
-                            title: [
-                                {
-                                    text: {
-                                        content: user.name || "Unknown User",
-                                    },
-                                },
-                            ],
-                        },
-                        Email: {
-                            email: user.email || "",
-                        },
-                        Provider: {
-                            rich_text: [
-                                {
-                                    text: {
-                                        content: "google",
-                                    },
-                                },
-                            ],
-                        },
-                        ProviderAccountId: {
-                            rich_text: [
-                                {
-                                    text: {
-                                        content: "",
-                                    },
-                                },
-                            ],
-                        },
-                        UpdatedAt: {
-                            rich_text: [
-                                {
-                                    text: {
-                                        content: now,
-                                    },
-                                },
-                            ],
-                        },
-                    },
+                    properties,
                 })) as CreatePageResponse;
 
                 return {
@@ -132,6 +274,13 @@ export default function NotionAdapter(): Adapter {
                     email: user.email || "",
                     image: user.image || null,
                     emailVerified: user.emailVerified || null,
+                    role: (user as any).role,
+                    circle: (user as any).circle,
+                    permissions: (user as any).permissions,
+                } as AdapterUser & {
+                    role?: string;
+                    circle?: string;
+                    permissions?: string[];
                 };
             } catch (error) {
                 console.error("Error creating user:", error);
@@ -237,13 +386,112 @@ export default function NotionAdapter(): Adapter {
             user: Partial<AdapterUser> & Pick<AdapterUser, "id">
         ): Promise<AdapterUser> {
             try {
-                // 簡略化のため、既存ユーザー情報を返すだけ
-                const existingUser = await this.getUserByEmail!(user.email!);
+                console.log("updateUser called with:", user);
 
-                if (!existingUser) {
+                // メールアドレスでユーザーを検索してNotionページIDを取得
+                const response = await notion.databases.query({
+                    database_id: databaseId,
+                    filter: {
+                        property: "Email",
+                        email: {
+                            equals: user.email!,
+                        },
+                    },
+                });
+
+                if (response.results.length === 0) {
                     throw new Error("User not found for update");
                 }
 
+                const notionPage = response.results[0];
+                const notionPageId = notionPage.id;
+
+                console.log("Found Notion page ID:", notionPageId);
+
+                // 既存ユーザー情報を取得
+                const existingUser = extractUserFromPage(notionPage as any);
+                if (!existingUser) {
+                    throw new Error("Could not extract user from page");
+                }
+
+                // Notionページを実際に更新
+                const updateProperties: any = {};
+
+                if (user.name) {
+                    updateProperties.Name = {
+                        title: [
+                            {
+                                text: {
+                                    content: user.name,
+                                },
+                            },
+                        ],
+                    };
+                }
+
+                if ((user as any).role) {
+                    updateProperties.Role = {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: (user as any).role,
+                                },
+                            },
+                        ],
+                    };
+                }
+
+                if ((user as any).circle) {
+                    updateProperties.circle = {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: (user as any).circle,
+                                },
+                            },
+                        ],
+                    };
+                }
+
+                if ((user as any).permissions) {
+                    updateProperties.Permission = {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: JSON.stringify(
+                                        (user as any).permissions
+                                    ),
+                                },
+                            },
+                        ],
+                    };
+                }
+
+                // UpdatedAtを更新
+                updateProperties.UpdatedAt = {
+                    rich_text: [
+                        {
+                            text: {
+                                content: new Date().toISOString(),
+                            },
+                        },
+                    ],
+                };
+
+                console.log(
+                    "Updating Notion page with properties:",
+                    updateProperties
+                );
+
+                // Notionページを更新
+                await notion.pages.update({
+                    page_id: notionPageId,
+                    properties: updateProperties,
+                });
+
+                console.log("Notion page updated successfully");
+
+                // 更新後のユーザー情報を返す
                 return {
                     id: existingUser.id,
                     name: user.name || existingUser.name,
@@ -251,9 +499,23 @@ export default function NotionAdapter(): Adapter {
                     image: user.image || existingUser.image,
                     emailVerified:
                         user.emailVerified || existingUser.emailVerified,
+                    role: (user as any).role || (existingUser as any).role,
+                    circle:
+                        (user as any).circle || (existingUser as any).circle,
+                    permissions:
+                        (user as any).permissions ||
+                        (existingUser as any).permissions,
+                } as AdapterUser & {
+                    role?: string;
+                    circle?: string;
+                    permissions?: string[];
                 };
             } catch (error) {
                 console.error("Error updating user:", error);
+                if (error instanceof Error) {
+                    console.error("Error message:", error.message);
+                    console.error("Error stack:", error.stack);
+                }
                 throw error;
             }
         },
@@ -265,85 +527,134 @@ export default function NotionAdapter(): Adapter {
             try {
                 const now = new Date().toISOString();
 
+                const properties: any = {
+                    Name: {
+                        title: [
+                            {
+                                text: {
+                                    content: "Account Link",
+                                },
+                            },
+                        ],
+                    },
+                    Email: {
+                        email: null, // 空文字列ではなくnullを設定
+                    },
+                    Provider: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: account.provider,
+                                },
+                            },
+                        ],
+                    },
+                    ProviderAccountId: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: account.providerAccountId,
+                                },
+                            },
+                        ],
+                    },
+                    Role: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: "",
+                                },
+                            },
+                        ],
+                    },
+                    circle: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: "",
+                                },
+                            },
+                        ],
+                    },
+                    Permission: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: JSON.stringify([]),
+                                },
+                            },
+                        ],
+                    },
+                    UpdatedAt: {
+                        rich_text: [
+                            {
+                                text: {
+                                    content: now,
+                                },
+                            },
+                        ],
+                    },
+                };
+
+                // ImageUrlプロパティは省略（存在しない可能性があるため）
+
                 await notion.pages.create({
                     parent: { database_id: databaseId },
-                    properties: {
-                        Name: {
-                            title: [
-                                {
-                                    text: {
-                                        content: "",
-                                    },
-                                },
-                            ],
-                        },
-                        Email: {
-                            email: "",
-                        },
-                        Provider: {
-                            rich_text: [
-                                {
-                                    text: {
-                                        content: account.provider,
-                                    },
-                                },
-                            ],
-                        },
-                        ProviderAccountId: {
-                            rich_text: [
-                                {
-                                    text: {
-                                        content: account.providerAccountId,
-                                    },
-                                },
-                            ],
-                        },
-                        UpdatedAt: {
-                            rich_text: [
-                                {
-                                    text: {
-                                        content: now,
-                                    },
-                                },
-                            ],
-                        },
-                    },
+                    properties,
                 });
 
                 return account;
             } catch (error) {
                 console.error("Error linking account:", error);
-                return account;
+                throw error; // エラーを再スローして適切にハンドリング
             }
         },
 
         /**
          * セッション関連のメソッド（簡略化版）
          */
-        async createSession({ sessionToken, userId, expires }) {
-            return { sessionToken, userId, expires };
+        async createSession(session: {
+            sessionToken: string;
+            userId: string;
+            expires: Date;
+        }): Promise<AdapterSession> {
+            return {
+                sessionToken: session.sessionToken,
+                userId: session.userId,
+                expires: session.expires,
+            };
         },
 
-        async getSessionAndUser(sessionToken) {
+        async getSessionAndUser(
+            sessionToken: string
+        ): Promise<{ session: AdapterSession; user: AdapterUser } | null> {
             return null;
         },
 
-        async updateSession({ sessionToken, expires }) {
+        async updateSession(
+            session: Partial<AdapterSession> &
+                Pick<AdapterSession, "sessionToken">
+        ): Promise<AdapterSession | null | undefined> {
             return null;
         },
 
-        async deleteSession(sessionToken) {
+        async deleteSession(sessionToken: string): Promise<void> {
             return;
         },
 
         /**
          * メールリンク認証用（未実装）
          */
-        async createVerificationToken() {
+        async createVerificationToken(
+            verificationToken: VerificationToken
+        ): Promise<VerificationToken> {
             throw new Error("Email verification not implemented");
         },
 
-        async useVerificationToken() {
+        async useVerificationToken(params: {
+            identifier: string;
+            token: string;
+        }): Promise<VerificationToken | null> {
             throw new Error("Email verification not implemented");
         },
     };

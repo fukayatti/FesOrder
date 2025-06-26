@@ -36,8 +36,8 @@ export default function Login() {
     useEffect(() => {
         if (session) {
             syncSessionWithCookies(session);
-            // 認証済みの場合はダッシュボードにリダイレクト
-            router.push("/dashboard");
+            // 認証済みの場合はロール選択ページにリダイレクト
+            router.push("/role-selection");
         }
     }, [session, router]);
 
@@ -79,8 +79,8 @@ export default function Login() {
                 const { setAuthCookies } = await import("@/lib/auth");
                 setAuthCookies(data.circleId, data.circleName, data.eventName);
 
-                // ダッシュボードにリダイレクト
-                router.push("/dashboard");
+                // ロール選択ページにリダイレクト
+                router.push("/role-selection");
             } else {
                 setError(data.error || "ログインに失敗しました");
             }
