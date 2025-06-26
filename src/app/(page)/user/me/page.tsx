@@ -216,6 +216,7 @@ export default function MyPage() {
                 body: JSON.stringify({
                     name: newUserName.trim(),
                 }),
+                credentials: "include",
             });
 
             const data = await response.json();
